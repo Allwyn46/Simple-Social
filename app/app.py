@@ -63,3 +63,10 @@ def create_post(post:PostCreate):
     new_post = {"title":post.title,"content":post.content}
     text_posts[max(text_posts.keys())+1] = new_post
     return new_post
+
+@app.delete("/posts/{id}")
+def delete_post(id: int):
+    if id not in text_posts:
+        raise HTTPException(status_code=404, detail="Post not found")
+    del text_posts[id]
+    return {"message": "Post deleted successfully"}
