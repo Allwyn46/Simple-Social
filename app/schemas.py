@@ -50,3 +50,9 @@ class PostCreate(BaseModel):
 class PostResponse(BaseModel):
     title:str
     content:str
+
+class PostDataResponse(BaseModel):
+    title:str
+    content:str
+    id:int
+    
