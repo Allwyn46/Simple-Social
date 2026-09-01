@@ -4,6 +4,11 @@ from app.db import Post, create_db_and_tables, get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
 from contextlib import asynccontextmanager
 from sqlalchemy import select
+from app.imageupload import imagekit
+import shutil
+import os
+import uuid
+import tempfile
 
 @asynccontextmanager
 async def lifeSpan(app:FastAPI):
@@ -39,17 +44,39 @@ async def upload_post(
     caption:str = Form(""),
     session:AsyncSession = Depends(get_async_session)
 ):
+
+    temp_file_path = None
+
+    try:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as templ_file:
+            temp_file_path = templ_file.name
+            shutil.copyfileobj(file.file, templ_file)
+        
+        upload_result = imagekit.files.upload(
+            file=open(templ_file,"rb"),
+            file_name=file.filename,
+            use_unique_file_name=True,
+            tags=["backend-upload"]
+        )
+
+        if upload_result.response.http_status_code == 200:
+
+            post = Post(
+                caption=caption,
+                url=upload_result.url,
+                file_type="video" if file.content_type.startswith("video/") else "image",
+                file_name=upload_result.name
+            )
+
+            session.add(post)
+            await session.commit()
+            await session.refresh(post)
+            return post
     
-    post = Post(
-        caption=caption,
-        url="dummy url",
-        file_type="photo",
-        file_name="dummy name"
-    )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-    session.add(post)
-    await session.commit()
-    await session.refresh(post)
-    return post
-
-
+    finally:
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
+        file.file.close()
