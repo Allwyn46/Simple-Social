@@ -52,15 +52,15 @@ async def upload_post(
             temp_file_path = templ_file.name
             shutil.copyfileobj(file.file, templ_file)
         
-        upload_result = imagekit.files.upload(
-            file=open(templ_file,"rb"),
-            file_name=file.filename,
-            use_unique_file_name=True,
-            tags=["backend-upload"]
-        )
+        with open(temp_file_path, "rb") as f:
+            upload_result = imagekit.files.upload(
+                file=f,
+                file_name=file.filename,
+                use_unique_file_name=True,
+                tags=["backend-upload"]
+            )
 
-        if upload_result.response.http_status_code == 200:
-
+            
             post = Post(
                 caption=caption,
                 url=upload_result.url,
@@ -80,3 +80,26 @@ async def upload_post(
         if temp_file_path and os.path.exists(temp_file_path):
             os.unlink(temp_file_path)
         file.file.close()
+
+
+@app.delete("/posts/{post_id}")
+async def delete_post(post_id:str,session:AsyncSession = Depends(get_async_session)):
+    try:
+        post_uuid = uuid.UUID(post_id)
+
+        result = await session.execute(select(Post).where(Post.id == post_uuid))
+        post = result.scalars().first()
+
+        if not post:
+            raise HTTPException(status_code=404,detail="Post Not Found")
+
+        await session.delete(post)
+        await session.commit()
+
+        return {
+            "Success":True,
+            "message":"Post deleted Successfully"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500,detail=str(e))
+    
