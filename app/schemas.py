@@ -1,4 +1,6 @@
 from pydantic import BaseModel
+from fastapi_users import schemas
+import uuid
 
 text_posts = {
     1: {
@@ -55,4 +57,12 @@ class PostDataResponse(BaseModel):
     title:str
     content:str
     id:int
-    
+     
+class UserRead(schemas.BaseUser[uuid.UUID]):
+    pass
+
+class UserCreate(schemas.BaseUserCreate[uuid.UUID]):
+    pass
+
+class UserUpdate(schemas.BaseUserUpdate[uuid.UUID]):
+    pass
