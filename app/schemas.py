@@ -61,8 +61,8 @@ class PostDataResponse(BaseModel):
 class UserRead(schemas.BaseUser[uuid.UUID]):
     pass
 
-class UserCreate(schemas.BaseUserCreate[uuid.UUID]):
+class UserCreate(schemas.BaseUserCreate):
     pass
 
-class UserUpdate(schemas.BaseUserUpdate[uuid.UUID]):
+class UserUpdate(schemas.BaseUserUpdate):
     pass
