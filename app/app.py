@@ -1,6 +1,6 @@
 from fastapi import FastAPI,HTTPException,File,UploadFile,Form,Depends
 from app.schemas import UserRead, UserCreate, UserUpdate
-from app.db import Post, create_db_and_tables, get_async_session
+from app.db import Post, User, create_db_and_tables, get_async_session
 from sqlalchemy.ext.asyncio import AsyncSession
 from contextlib import asynccontextmanager
 from sqlalchemy import select
@@ -49,6 +49,7 @@ async def get_posts(session:AsyncSession = Depends(get_async_session)):
 async def upload_post(
     file:UploadFile = File(...),
     caption:str = Form(""),
+    user: User = Depends(current_active_user),
     session:AsyncSession = Depends(get_async_session)
 ):
 
@@ -69,6 +70,7 @@ async def upload_post(
 
             
             post = Post(
+                user_id=user.id,
                 caption=caption,
                 url=upload_result.url,
                 file_type="video" if file.content_type.startswith("video/") else "image",
@@ -90,7 +92,11 @@ async def upload_post(
 
 
 @app.delete("/posts/{post_id}")
-async def delete_post(post_id:str,session:AsyncSession = Depends(get_async_session)):
+async def delete_post(
+    post_id:str,
+    user: User = Depends(current_active_user),
+    session:AsyncSession = Depends(get_async_session
+)):
     try:
         post_uuid = uuid.UUID(post_id)
 
