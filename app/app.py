@@ -26,20 +26,30 @@ app.include_router(fastapi_users.get_users_router(UserRead, UserUpdate),prefix="
 
 
 @app.get("/feed")
-async def get_posts(session:AsyncSession = Depends(get_async_session)):
+async def get_posts(
+    session:AsyncSession = Depends(get_async_session),
+    user: User = Depends(current_active_user)
+):
     feedData = await session.execute(select(Post).order_by(Post.created_at.desc()))
     posts = [row[0] for row in feedData.all()]
+
+    result = await session.execute(select(User))
+    users = [row[0] for row in result.all()]
+    user_dict = {u.id: u.email for u in users}
 
     posts_data = []
     for post in posts:
         posts_data.append(
             {
                 "id": str(post.id),
+                "user_id": str(post.user_id),
                 "caption": post.caption,
                 "url": post.url,
                 "file_type": post.file_type,
                 "file_name": post.file_name,
-                "created_at": post.created_at
+                "created_at": post.created_at,
+                "is_owner": post.user_id == user.id,
+                "email": user_dict.get(post.user_id)
             }
         )
 
@@ -105,6 +115,9 @@ async def delete_post(
 
         if not post:
             raise HTTPException(status_code=404,detail="Post Not Found")
+
+        if post.user_id != user.id:
+            raise HTTPException(status_code=403,detail="You are not authorized to delete this post")
 
         await session.delete(post)
         await session.commit()
